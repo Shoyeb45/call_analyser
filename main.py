@@ -6,7 +6,8 @@ from io import BytesIO
 from elevenlabs.client import ElevenLabs
 import os
 import logging
-from app.utils.audio import tokenize_content, convert_to_wav, summarise_text, analyze_emotions, abusive_words_analyse
+from app.utils.audio import convert_to_wav, summarise_text, analyze_emotions, abusive_words_analyse
+from app.utils.gpt_prompt import check_false_claims
 
 # Create and configure logger
 logging.basicConfig(
@@ -25,8 +26,8 @@ app.config['UPLOAD_FOLDER'] = 'uploads'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 @app.route("/", methods=["GET"])
-# def index():
-#     return render_template("index.html")
+def index():
+    return render_template("index.html")
 
 @app.route("/api/upload", methods=["GET", "POST"])
 def analyse_audio():
@@ -51,9 +52,9 @@ def analyse_audio():
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         audio_file.save(file_path)
         
+        
         wav_path = file_path.rsplit(".", 1)[0] + ".wav"
         convert_to_wav(file_path, wav_path)
-        
         with open(wav_path, "rb") as f:
             audio_bytes = BytesIO(f.read())
         
@@ -70,10 +71,11 @@ def analyse_audio():
             language_code="hi", # Language of the audio file. If set to None, the model will detect the language automatically.
             # diarize=True, # Whether to annotate who is speaking
         )
-        
+        logging.info("Successfully converted audio to text")
         text = transcription.text
         words = transcription.words
-
+        logging.info(f"Trascription: {text}")
+     
         summary, sentiment, abusive_words = summarise_text(text)
 
         abusive_words = abusive_words_analyse(abusive_words, words)
@@ -88,15 +90,54 @@ def analyse_audio():
         
     except Exception as e:
         logging.error(f"Failed to analyse the video, error message: {str(e)}")
+        
         return jsonify({
             "success" : False,
-            "message": f"Error while analysing the audio, error: {str(e)}"
-      
+            "message": f"Error while analysing the audio, error: {str(e)}"      
         })
+
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({
+        "message": "The flask app is up and running"
+    })
+
+@app.route("/api/check-truth", methods=["POST"])
+def check_truth():
+    try:
+        post_data = request.get_json()
+        if not post_data:
+            return jsonify({
+                "success" : False,
+                "error" : "Failed to get the data in the body"
+            })
+        print(post_data)
+        transcription = post_data.get("transcription")
+        claims = post_data.get("claims")
+        
+        if not transcription or not claims:
+            return jsonify({
+                "success" : False,
+                "error": "Failed to get transcription value or claims"
+            })
+        
+        result = check_false_claims(transcription, claims)
+        print(result)
+        
+        return jsonify({
+            "result": result
+        })
+        
+    except Exception as e:
+        raise e
+        return jsonify({
+            "success" : False,
+            "error" : f"Error occurred while claiming, error : {str(e)}"
+        })
+
 
 
 if __name__ == "__main__":
     from dotenv import load_dotenv
     load_dotenv()
-    # summarise_text(text2)
     app.run()

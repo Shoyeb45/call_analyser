@@ -1,86 +1,752 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <title>Document</title>
+    <title>Audio Analysis Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <!-- Add Marked.js for markdown parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
+    <style>
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .sentiment-bar {
+            transition: width 0.8s ease-in-out;
+        }
+
+        .abusive-word-tag {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.8;
+            }
+        }
+
+        .upload-area {
+            transition: all 0.3s ease;
+        }
+
+        .upload-area:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .result-card {
+            animation: slideUp 0.6s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Markdown content styling */
+        .markdown-content {
+            line-height: 1.6;
+        }
+
+        .markdown-content h1 {
+            font-size: 1.875rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            color: #f8fafc;
+        }
+
+        .markdown-content h2 {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 0.75rem;
+            margin-top: 1.5rem;
+            color: #f1f5f9;
+        }
+
+        .markdown-content h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            margin-top: 1rem;
+            color: #e2e8f0;
+        }
+
+        .markdown-content p {
+            margin-bottom: 1rem;
+            color: #cbd5e1;
+        }
+
+        .markdown-content ul,
+        .markdown-content ol {
+            margin-bottom: 1rem;
+            padding-left: 1.5rem;
+            color: #cbd5e1;
+        }
+
+        .markdown-content li {
+            margin-bottom: 0.25rem;
+        }
+
+        .markdown-content strong {
+            font-weight: 600;
+            color: #f8fafc;
+        }
+
+        .markdown-content em {
+            font-style: italic;
+            color: #e2e8f0;
+        }
+
+        .markdown-content code {
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 0.125rem 0.25rem;
+            border-radius: 0.25rem;
+            font-family: monospace;
+            color: #fbbf24;
+        }
+
+        .markdown-content pre {
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            margin-bottom: 1rem;
+        }
+
+        .markdown-content pre code {
+            background: none;
+            padding: 0;
+            color: #e2e8f0;
+        }
+
+        .markdown-content blockquote {
+            border-left: 4px solid #3b82f6;
+            padding-left: 1rem;
+            margin: 1rem 0;
+            font-style: italic;
+            color: #94a3b8;
+        }
+    </style>
 </head>
-<body>
-    <div>
-        <div>
-            <div>
-                Please select your call recording
-            </div>
-            <div>
-                <form method="POST" enctype="multipart/form-data">
-                    <div>
-                        <input type="file" name="audio_file" id="audio_file">
+
+<body class="min-h-screen gradient-bg">
+    <header class="text-white py-6">
+        <div class="container mx-auto px-4">
+            <h1 class="text-4xl font-bold text-center mb-2">Audio Analysis Dashboard</h1>
+            <p class="text-center text-blue-100">Upload audio files for transcription, sentiment analysis, and abusive
+                content detection</p>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-4 pb-8">
+        <div class="mb-8">
+            <div class="glass-effect rounded-2xl p-8 upload-area">
+                <div class="text-center">
+                    <div class="mb-6">
+                        <i data-lucide="upload-cloud" class="w-16 h-16 text-blue-300 mx-auto mb-4"></i>
+                        <h2 class="text-2xl font-semibold text-white mb-2">Upload Audio File</h2>
+                        <p class="text-blue-100">Select an audio file to analyze</p>
                     </div>
-                    <div>
-                        <button>Analyze</button>
+
+                    <input type="file" id="audioFile" accept="audio/*" class="hidden">
+                    <button onclick="document.getElementById('audioFile').click()"
+                        class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-8 py-3 rounded-lg font-semibold transition duration-300 transform hover:scale-105">
+                        Choose Audio File
+                    </button>
+
+                    <div id="fileName" class="mt-4 text-blue-100"></div>
+
+                    <button id="uploadBtn"
+                        class="mt-4 bg-gray-400 text-white px-8 py-3 rounded-lg font-semibold transition duration-300 cursor-not-allowed"
+                        disabled>
+                        Analyze Audio
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="loading" class="hidden text-center mb-8">
+            <div class="glass-effect rounded-2xl p-8">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+                <p class="text-white text-lg">Analyzing audio...</p>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results" class="hidden space-y-6">
+            <!-- Audio Player -->
+            <div class="glass-effect rounded-2xl p-6 result-card">
+                <h3 class="text-xl font-semibold text-white mb-4 flex items-center">
+                    <i data-lucide="volume-2" class="w-5 h-5 mr-2"></i>
+                    Audio Player
+                </h3>
+                <audio id="audioPlayer" controls class="w-full">
+                    <source id="audioSource" type="audio/wav">
+                    Your browser does not support the audio element.
+                </audio>
+            </div>
+
+            <!-- Transcription -->
+            <div class="glass-effect rounded-2xl p-6 result-card">
+                <h3 class="text-xl font-semibold text-white mb-4 flex items-center">
+                    <i data-lucide="file-text" class="w-5 h-5 mr-2"></i>
+                    Transcription
+                </h3>
+                <div id="transcription" class="bg-white/10 rounded-lg p-4 text-white whitespace-pre-wrap"></div>
+            </div>
+
+            <!-- Summary -->
+            <div class="glass-effect rounded-2xl p-6 result-card">
+                <h3 class="text-xl font-semibold text-white mb-4 flex items-center">
+                    <i data-lucide="scroll-text" class="w-5 h-5 mr-2"></i>
+                    Summary
+                </h3>
+                <div id="summary" class="bg-white/10 rounded-lg p-4 text-white markdown-content"></div>
+            </div>
+
+            <!-- Sentiment Analysis -->
+            <div class="glass-effect rounded-2xl p-6 result-card">
+                <h3 class="text-xl font-semibold text-white mb-4 flex items-center">
+                    <i data-lucide="heart" class="w-5 h-5 mr-2"></i>
+                    Sentiment Analysis
+                </h3>
+                <div class="mb-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-white font-medium">Overall Sentiment</span>
+                        <span id="overallSentiment" class="px-3 py-1 rounded-full text-sm font-semibold"></span>
                     </div>
-                </form>
-                <form method="POST" enctype="multipart/form-data">
-                    <input type="file" name="audio" accept="audio/*" required>
-                    <button type="submit">Analyze</button>
-                </form>
-            </div>
-        </div>
+                </div>
 
-        <div>
-            <div>
-                Summary of the audio
-            </div>
-            <div>
-                <!-- Summary will show here -->
-            </div>
-        </div>
-
-        <div>
-            <div>
-                Sentiment Analysis
-            </div>
-
-            <canvas id="emotionChart" width="400" height="400"></canvas>
-        </div>
-
-        <div>
-            <div>Abusive words</div>
-
-            <!-- I want to show the word and timestamp together, think of some creative way -->
-        </div>
-
-        <div>
-            <div>
-                <form action="">
-                    <div>
-                        <label for="phrase">Text that you need to detect</label>
-                        <input type="text" name="phrase" id="phrase">
+                <!-- Chart Container -->
+                <div class="mb-6">
+                    <div class="bg-white/10 rounded-lg p-4">
+                        <canvas id="sentimentChart" width="400" height="200"></canvas>
                     </div>
-                </form>
+                </div>
+
+                <!-- Progress Bars -->
+                <div id="sentimentBars" class="space-y-3"></div>
             </div>
 
-            <div>
-                <!-- Here we will show the result of the above thing -->
+            <!-- Abusive Words -->
+            <div class="glass-effect rounded-2xl p-6 result-card">
+                <h3 class="text-xl font-semibold text-white mb-4 flex items-center">
+                    <i data-lucide="alert-triangle" class="w-5 h-5 mr-2"></i>
+                    Abusive Words Detection
+                </h3>
+                <div id="abusiveWords" class="space-y-4"></div>
+            </div>
+        </div>
+        <div class="glass-effect rounded-2xl p-6 result-card">
+            <h3 class="text-xl font-semibold text-white mb-4 flex items-center">
+                <i data-lucide="search-check" class="w-5 h-5 mr-2"></i>
+                Claim Verification
+            </h3>
+            <div class="mb-6">
+                <label for="claimsInput" class="block text-white text-sm font-medium mb-2">
+                    Enter claims to verify (separate multiple claims with | symbol):
+                </label>
+                <div class="mb-3">
+                    <textarea id="claimsInput"
+                        placeholder="e.g., guarantee of placement | boss was calm and caring | demo sessions were mandatory"
+                        class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent resize-none"
+                        rows="3"></textarea>
+                </div>
+                <div class="text-sm text-blue-200 mb-4">
+                    <div class="flex items-start">
+                        <i data-lucide="info" class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0"></i>
+                        <div>
+                            <p class="mb-1"><strong>Instructions:</strong></p>
+                            <ul class="list-disc list-inside space-y-1 text-xs">
+                                <li>Enter specific claims you want to verify against the audio content</li>
+                                <li>Use the <strong>|</strong> symbol to separate multiple claims</li>
+                                <li>Be specific and clear in your claims</li>
+                                <li>Examples: "100% placement guarantee", "No fees required", "Boss was supportive"</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <button id="verifyClaimsBtn" onclick="verifyClaims()"
+                    class="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white px-6 py-2 rounded-lg font-semibold transition duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i data-lucide="search" class="w-4 h-4 inline mr-2"></i>
+                    Verify Claims
+                </button>
+            </div>
+    
+            <!-- Results Container -->
+            <div id="claimResults" class="hidden">
+                <div class="border-t border-white/20 pt-4">
+                    <h4 class="text-lg font-semibold text-white mb-4">Verification Results:</h4>
+                    <div id="claimResultsContent" class="space-y-4"></div>
+                </div>
+            </div>
+    
+            <!-- Loading State -->
+            <div id="claimLoading" class="hidden text-center py-4">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
+                <p class="text-white text-sm">Verifying claims...</p>
             </div>
         </div>
     </div>
 
+
     <script>
-    //   const data = {{ emotions | tojson }};
-    //   new Chart(document.getElementById('emotionChart'), {
-    //     type: 'pie',
-    //     data: {
-    //       labels: Object.keys(data),
-    //       datasets: [{ data: Object.values(data),
-    //                    backgroundColor: [
-    //                      '#d90429', '#f95738', '#fcbf49',
-    //                      '#2ec4b6', '#8d99ae', '#e63946',
-    //                      '#457b9d']}]
-    //     },
-    //     options: { responsive: true }
-    //   });
+        let selectedFile = null;
+        let audioBlob = null;
+        let sentimentChart = null;
+
+        // Initialize Lucide icons with error handling
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            } else {
+                console.warn('Lucide icons not loaded, using fallback');
+                // Hide icons if lucide fails to load
+                document.querySelectorAll('[data-lucide]').forEach(el => el.style.display = 'none');
+            }
+        });
+
+        // File selection handler
+        document.getElementById('audioFile').addEventListener('change', function (e) {
+            selectedFile = e.target.files[0];
+            const uploadBtn = document.getElementById('uploadBtn');
+
+            if (selectedFile) {
+                document.getElementById('fileName').innerHTML = `
+                    <div class="flex items-center justify-center">
+                        <i data-lucide="file-audio" class="w-4 h-4 mr-2"></i>
+                        <span>Selected: ${selectedFile.name}</span>
+                    </div>
+                `;
+
+                // Enable the button and change styling
+                uploadBtn.disabled = false;
+                uploadBtn.className = 'mt-4 bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-lg font-semibold transition duration-300 transform hover:scale-105';
+                uploadBtn.onclick = uploadFile; // Add click handler
+
+                // Safely create icons
+                if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                }
+            } else {
+                // Reset if no file selected
+                document.getElementById('fileName').innerHTML = '';
+                uploadBtn.disabled = true;
+                uploadBtn.className = 'mt-4 bg-gray-400 text-white px-8 py-3 rounded-lg font-semibold transition duration-300 cursor-not-allowed';
+                uploadBtn.onclick = null; // Remove click handler
+            }
+        });
+
+        // Convert timestamp string to seconds
+        function timestampToSeconds(timestamp) {
+            const parts = timestamp.split(':');
+            return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+        }
+
+        // Jump to specific time in audio
+        function jumpToTime(timestamp) {
+            const audioPlayer = document.getElementById('audioPlayer');
+            const seconds = timestampToSeconds(timestamp);
+            audioPlayer.currentTime = seconds;
+            audioPlayer.play();
+        }
+
+        // Render markdown content
+        function renderMarkdown(markdownText) {
+            if (typeof marked !== 'undefined') {
+                // Configure marked for better security
+                marked.setOptions({
+                    sanitize: false, // We're controlling the input, so this is safe
+                    breaks: true,    // Convert line breaks to <br>
+                    gfm: true       // Enable GitHub Flavored Markdown
+                });
+                return marked.parse(markdownText);
+            } else {
+                // Fallback: simple text with line breaks
+                return markdownText.replace(/\n/g, '<br>');
+            }
+        }
+
+        // Upload file and analyze
+        async function uploadFile() {
+            console.log('Upload function called');
+            console.log('Selected file:', selectedFile);
+
+            if (!selectedFile) {
+                alert('Please select an audio file first.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('audio_file', selectedFile);
+
+            // Store audio blob for player
+            audioBlob = selectedFile;
+
+            // Disable button during upload
+            const uploadBtn = document.getElementById('uploadBtn');
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = 'Analyzing...';
+            uploadBtn.className = 'mt-4 bg-gray-400 text-white px-8 py-3 rounded-lg font-semibold transition duration-300 cursor-not-allowed';
+
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('results').classList.add('hidden');
+
+            try {
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    displayResults(data);
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while uploading the file.');
+            } finally {
+                document.getElementById('loading').classList.add('hidden');
+
+                // Re-enable button
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = 'Analyze Audio';
+                uploadBtn.className = 'mt-4 bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-lg font-semibold transition duration-300 transform hover:scale-105';
+            }
+        }
+
+        // Display analysis results
+        function displayResults(data) {
+            // Setup audio player
+            const audioPlayer = document.getElementById('audioPlayer');
+            const audioSource = document.getElementById('audioSource');
+            audioSource.src = URL.createObjectURL(audioBlob);
+            audioPlayer.load();
+
+            // Display transcription
+            document.getElementById('transcription').textContent = data.transcription;
+
+            // Display summary with markdown formatting
+            const summaryElement = document.getElementById('summary');
+            summaryElement.innerHTML = renderMarkdown(data.summary);
+
+            // Display overall sentiment
+            const overallSentiment = document.getElementById('overallSentiment');
+            const sentiment = data.sentiment.overall_sentiment;
+            overallSentiment.textContent = sentiment.charAt(0).toUpperCase() + sentiment.slice(1);
+
+            if (sentiment === 'positive') {
+                overallSentiment.className = 'px-3 py-1 rounded-full text-sm font-semibold bg-green-500 text-white';
+            } else if (sentiment === 'negative') {
+                overallSentiment.className = 'px-3 py-1 rounded-full text-sm font-semibold bg-red-500 text-white';
+            } else {
+                overallSentiment.className = 'px-3 py-1 rounded-full text-sm font-semibold bg-gray-500 text-white';
+            }
+
+            // Display sentiment bars
+            const sentimentBars = document.getElementById('sentimentBars');
+            sentimentBars.innerHTML = '';
+
+            const sentimentData = data.sentiment.distributed_sentiment;
+            const labels = [];
+            const values = [];
+            const colors = [];
+
+            // Color mapping for different emotions
+            const emotionColors = {
+                anger: '#ff6b6b',
+                joy: '#4ecdc4',
+                sadness: '#45b7d1',
+                fear: '#f39c12',
+                disgust: '#9b59b6',
+                surprise: '#e74c3c',
+                neutral: '#95a5a6',
+                frustration: '#e67e22',
+                confusion: '#34495e',
+                empathy: '#2ecc71',
+                laughter: '#f1c40f',
+                sarcasm: '#8e44ad'
+            };
+
+            Object.entries(sentimentData).forEach(([emotion, value]) => {
+                const percentage = (value * 100).toFixed(1);
+                labels.push(emotion.charAt(0).toUpperCase() + emotion.slice(1));
+                values.push(percentage);
+                colors.push(emotionColors[emotion] || '#95a5a6');
+
+                sentimentBars.innerHTML += `
+                    <div class="mb-2">
+                        <div class="flex justify-between text-sm text-white mb-1">
+                            <span class="capitalize">${emotion}</span>
+                            <span>${percentage}%</span>
+                        </div>
+                        <div class="w-full bg-white/20 rounded-full h-2">
+                            <div class="sentiment-bar h-2 rounded-full" 
+                                 style="width: ${percentage}%; background-color: ${emotionColors[emotion] || '#95a5a6'}"></div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Create or update the chart
+            createSentimentChart(labels, values, colors);
+
+            // Display abusive words
+            const abusiveWords = document.getElementById('abusiveWords');
+            abusiveWords.innerHTML = '';
+
+            if (data.abusive_words && data.abusive_words.length > 0) {
+                data.abusive_words.forEach(item => {
+                    const wordDiv = document.createElement('div');
+                    wordDiv.className = 'bg-white/10 rounded-lg p-4';
+
+                    const timestampButtons = item.timestamps.map(timestamp =>
+                        `<button onclick="jumpToTime('${timestamp}')" 
+                                class="abusive-word-tag text-white px-3 py-1 rounded-full text-sm font-semibold mr-2 mb-2 hover:scale-105 transition-transform cursor-pointer">
+                            ${timestamp}
+                        </button>`
+                    ).join('');
+
+                    wordDiv.innerHTML = `
+                        <div class="mb-3">
+                            <span class="text-white font-semibold text-lg">"${item.word}"</span>
+                            <span class="text-blue-200 ml-2">(${item.timestamps.length} occurrence${item.timestamps.length > 1 ? 's' : ''})</span>
+                        </div>
+                        <div class="flex flex-wrap">
+                            <span class="text-white text-sm mr-2 mb-2">Click to jump:</span>
+                            ${timestampButtons}
+                        </div>
+                    `;
+
+                    abusiveWords.appendChild(wordDiv);
+                });
+            } else {
+                abusiveWords.innerHTML = '<div class="text-center text-green-200 py-4">No abusive words detected!</div>';
+            }
+
+            document.getElementById('results').classList.remove('hidden');
+        }
+
+        // Create sentiment analysis chart
+        function createSentimentChart(labels, values, colors) {
+            const ctx = document.getElementById('sentimentChart').getContext('2d');
+
+            // Destroy existing chart if it exists
+            if (sentimentChart) {
+                sentimentChart.destroy();
+            }
+
+            // Filter out zero values for cleaner visualization
+            const filteredData = labels.map((label, index) => ({
+                label: label,
+                value: parseFloat(values[index]),
+                color: colors[index]
+            })).filter(item => item.value > 0).sort((a, b) => b.value - a.value);
+
+            const chartLabels = filteredData.map(item => item.label);
+            const chartValues = filteredData.map(item => item.value);
+            const chartColors = filteredData.map(item => item.color);
+
+            sentimentChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: chartLabels,
+                    datasets: [{
+                        data: chartValues,
+                        backgroundColor: chartColors,
+                        borderColor: chartColors.map(color => color + '80'),
+                        borderWidth: 2,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                color: 'white',
+                                font: {
+                                    size: 12
+                                },
+                                padding: 15,
+                                usePointStyle: true,
+                                pointStyle: 'circle'
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: 'white',
+                            bodyColor: 'white',
+                            borderColor: 'rgba(255, 255, 255, 0.3)',
+                            borderWidth: 1,
+                            callbacks: {
+                                label: function (context) {
+                                    return context.label + ': ' + context.parsed + '%';
+                                }
+                            }
+                        }
+                    },
+                    animation: {
+                        animateRotate: true,
+                        animateScale: true,
+                        duration: 1000,
+                        easing: 'easeOutQuart'
+                    }
+                }
+            });
+        }
+
+
+        async function verifyClaims() {
+            const claimsInput = document.getElementById('claimsInput');
+            const claims = claimsInput.value.trim();
+            const transcription = "सर, अभी जस्ट आए हैं। डेमो से निकला ही था। साले इतना गांड फाड़ दूंगा न तेरी मैं। तेरे को अकल है काम करने की कि नहीं है? अकल है तेरे में? हाँ सर। तेरे को कितने बजे बोले थे मैंने कॉल करने के लिए मेरे को? सर उसके बाद से दो बैक टू बैक डेमो में था। अबे इतना मारूंगा न मैं सही बता रहा हूं मेरा दिमाग मत खराब कर साले! तू कितने बजे डेमो से निकला है? डेमो से निकलकर कॉल करेगा मेरे को कि नहीं करेगा? हां सर, हां सर। सिर! मैं कॉल करूंगा क्या तेरे को रेको थरे के अल्फा जेट? नहीं नहीं सर अभी करने ही वाला था मैं। बस खाना खाकर मतलब अभी... कहां पर खाना खा रखा था तूने भाई देख! चूल गया है क्या तू? सॉरी सर वो करने ही वाले थे... हेलो। कहां पर हो? सर अभी रूम पर ही हूं। कैब वगैरह कुछ नहीं हो रही थी। कौन से रूम पर हो? मैं यहां पर हूं सर पंचशील कॉलोनी। मतलब किसके रूम पे हो? अपने रूम पे हो? हां सर। तू भोसड़ी के जब बोला था ना ऑफिस आने के लिए डायरेक्ट ऑफिस क्यों नहीं आया? सर डायरेक्ट ऑफिस, सर वो फॉर्मल्स मेरे गंदे थे, मेरे पास कुछ नहीं था तो मैं वो भिगोने आया था कि मतलब भिगो दूंगा फिर... क्या भिगवाएगा भोसड़ी क्या तुम्हारी? समझ नहीं आ रहा तुम्हें? फॉर्मल भिगोने क्या क्या भेंचोद! नहीं सर मतलब कुछ खाया भी नहीं था वो खाने से पहले। मारे तो सूखा नहीं मेरे मुखे रेजम लगा दे। साले तेरा रेजिग्नेशन लेटर भी टाइप करके डालूंगा मैं। पेक कर देख ला सामने आते है। छठे वीक से जीरो बैठा है भेंचोद! साला जॉब आना चाय पीने जाता क्या? सुबह रेजिग्नेशन लेटर मैं टाइप करके भेज रहा हूं बेचारे...";
+            // const transcription = document.getElementById("summary").textContent;
+
+            if (!claims) {
+                alert('Please enter at least one claim to verify.');
+                return;
+            }
+
+            if (!transcription) {
+                alert('Please upload and analyze an audio file first.');
+                return;
+            }
+
+            const verifyBtn = document.getElementById('verifyClaimsBtn');
+            const claimResults = document.getElementById('claimResults');
+            const claimLoading = document.getElementById('claimLoading');
+            const claimResultsContent = document.getElementById('claimResultsContent');
+
+            // Show loading state
+            verifyBtn.disabled = true;
+            verifyBtn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 inline mr-2 animate-spin"></i>Verifying...';
+            claimLoading.classList.remove('hidden');
+            claimResults.classList.add('hidden');
+
+            try {
+                const payload = {
+                    transcription: transcription,
+                    claims: claims
+                };
+
+
+                const response = await fetch('/api/check-truth', {
+                    method: 'POST',
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.result) {
+                    displayClaimResults(data.result.result);
+                } else {
+                    throw new Error(data.message || 'Failed to verify claims');
+                }
+
+            } catch (error) {
+                console.error('Error verifying claims:', error);
+                alert('An error occurred while verifying claims: ' + error.message);
+            } finally {
+                // Reset button state
+                verifyBtn.disabled = false;
+                verifyBtn.innerHTML = '<i data-lucide="search" class="w-4 h-4 inline mr-2"></i>Verify Claims';
+                claimLoading.classList.add('hidden');
+
+                // Recreate icons
+                if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                }
+            }
+        }
+
+        function displayClaimResults(results) {
+            const claimResults = document.getElementById('claimResults');
+            const claimResultsContent = document.getElementById('claimResultsContent');
+
+            claimResultsContent.innerHTML = '';
+
+            if (results.length === 0) {
+                claimResultsContent.innerHTML = `
+            <div class="bg-green-500/20 border border-green-500/30 rounded-lg p-4">
+                <div class="flex items-center">
+                    <i data-lucide="check-circle" class="w-5 h-5 text-green-400 mr-3"></i>
+                    <span class="text-green-200 font-medium">All claims verified successfully! No violations found.</span>
+                </div>
+            </div>
+        `;
+            } else {
+                results.forEach((result, index) => {
+                    const resultDiv = document.createElement('div');
+                    resultDiv.className = 'bg-red-500/20 border border-red-500/30 rounded-lg p-4';
+
+                    resultDiv.innerHTML = `
+                <div class="mb-3">
+                    <div class="flex items-start mb-2">
+                        <i data-lucide="alert-circle" class="w-5 h-5 text-red-400 mr-3 mt-0.5 flex-shrink-0"></i>
+                        <div class="flex-1">
+                            <h5 class="text-red-200 font-semibold text-sm mb-1">Claim Violation #${index + 1}</h5>
+                            <p class="text-red-100 text-sm"><strong>Violated Claim:</strong> ${result.matched_constraint}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <p class="text-white text-sm font-medium mb-1">Evidence from Audio:</p>
+                    <div class="bg-black/20 rounded-md p-3">
+                        <p class="text-gray-200 text-sm italic">"${result.phrase}"</p>
+                    </div>
+                </div>
+                
+                <div>
+                    <p class="text-white text-sm font-medium mb-1">Why This Violates the Claim:</p>
+                    <p class="text-red-100 text-sm">${result.why_violation}</p>
+                </div>
+            `;
+
+                    claimResultsContent.appendChild(resultDiv);
+                });
+            }
+
+            claimResults.classList.remove('hidden');
+
+            // Recreate icons
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        }
     </script>
 </body>
 

@@ -61,7 +61,7 @@ You are a call analysis assistant. You are also an expert in analyzing human emo
 }
 
 Instructions:
-- "summary": Write a concise summary (3-4 lines) of the call.
+- "summary": Write a concise summary of the call in bulleted point, give the markdown text as string as a value in this key.
 - "sentiment": 
     - "overall_sentiment": One of "neutral", "positive", or "negative" for the entire call.
     - "distributed_sentiment": Assign a probability (float between 0 and 1) to each emotion listed above. The sum must be 1.
@@ -77,12 +77,11 @@ Here is the audio transcription in Hindi/Hinglish:
 \"\"\"
 """
     
-    logging.info("Sending the prompt to open ai")
     res = chat_with_openAI(userPrompt, systemPrompt)
-
+    logging.info(f"Response from chatgpt : {res}")
     # Convert this into the object fron json string
     res = json.loads(res)
-
+    
     return res["summary"], res["sentiment"], res["abusive_words"]
         
 

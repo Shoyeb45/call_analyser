@@ -1,0 +1,17 @@
+# import pickle
+# from app.utils.audio import abuse_words_analyse
+# with open("transcription.pkl", "rb") as f:
+#     transcription = pickle.load(f)
+
+
+# print(transcription.text)
+
+# # summary -> done
+
+ps = "{\n  \"summary\": \"The call involves a heated argument between a senior and a subordinate, with the senior expressing extreme anger and frustration over the subordinate's perceived lack of responsibility and delays in work. The conversation is punctuated with frequent verbal abuse and threats of termination. The subordinate tries to explain and apologize, but the senior continues to berate and insult him. The overall tone is aggressive with no resolution or empathy shown.\",\n  \"sentiment\": {\n    \"overall_sentiment\": \"negative\",\n    \"distributed_sentiment\": {\n      \"joy\": 0.0,\n      \"sadness\": 0.10,\n      \"anger\": 0.50,\n      \"frustration\": 0.20,\n      \"confusion\": 0.08,\n      \"empathy\": 0.0,\n      \"surprise\": 0.01,\n      \"sarcasm\": 0.04,\n      \"laughter\": 0.0,\n      \"fear\": 0.05,\n      \"disgust\": 0.01,\n      \"neutral\": 0.01\n    }\n  },\n  \"abusive_words\": [\"साले\", \"गांड फाड़\", \"भोसड़ी\", \"भेंचोद\"]\n}"
+
+import json
+
+data = json.loads(ps)
+
+print(data["summary"])

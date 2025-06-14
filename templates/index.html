@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>Document</title>
+</head>
+<body>
+    <div>
+        <div>
+            <div>
+                Please select your call recording
+            </div>
+            <div>
+                <form method="POST" enctype="multipart/form-data">
+                    <div>
+                        <input type="file" name="audio_file" id="audio_file">
+                    </div>
+                    <div>
+                        <button>Analyze</button>
+                    </div>
+                </form>
+                <form method="POST" enctype="multipart/form-data">
+                    <input type="file" name="audio" accept="audio/*" required>
+                    <button type="submit">Analyze</button>
+                </form>
+            </div>
+        </div>
+
+        <div>
+            <div>
+                Summary of the audio
+            </div>
+            <div>
+                <!-- Summary will show here -->
+            </div>
+        </div>
+
+        <div>
+            <div>
+                Sentiment Analysis
+            </div>
+
+            <canvas id="emotionChart" width="400" height="400"></canvas>
+        </div>
+
+        <div>
+            <div>Abusive words</div>
+
+            <!-- I want to show the word and timestamp together, think of some creative way -->
+        </div>
+
+        <div>
+            <div>
+                <form action="">
+                    <div>
+                        <label for="phrase">Text that you need to detect</label>
+                        <input type="text" name="phrase" id="phrase">
+                    </div>
+                </form>
+            </div>
+
+            <div>
+                <!-- Here we will show the result of the above thing -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+    //   const data = {{ emotions | tojson }};
+    //   new Chart(document.getElementById('emotionChart'), {
+    //     type: 'pie',
+    //     data: {
+    //       labels: Object.keys(data),
+    //       datasets: [{ data: Object.values(data),
+    //                    backgroundColor: [
+    //                      '#d90429', '#f95738', '#fcbf49',
+    //                      '#2ec4b6', '#8d99ae', '#e63946',
+    //                      '#457b9d']}]
+    //     },
+    //     options: { responsive: true }
+    //   });
+    </script>
+</body>
+
+</html>
